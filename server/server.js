@@ -1,6 +1,7 @@
 import express from 'express'
 import path from 'path'
 import cors from 'cors'
+import axios from 'axios'
 import bodyParser from 'body-parser'
 import sockjs from 'sockjs'
 import { renderToStaticNodeStream } from 'react-dom/server'
@@ -11,10 +12,21 @@ import Root from '../client/config/root'
 
 import Html from '../client/html'
 
-let connections = []
+const { readFile, writeFile, unlink } = require('fs').promises
 
 const port = process.env.PORT || 8090
 const server = express()
+
+server.use(cors())
+
+const setHeaders = (req, res, next) => {
+  res.set('x-skillcrucial-user', '07d1a143-554a-4446-8a7c-0af33afe60c7')
+  res.set('Access-Control-Expose-Headers', 'X-SKILLCRUCIAL-USER')
+  next()
+}
+server.use(setHeaders)
+
+let connections = []
 
 const middleware = [
   cors(),
@@ -25,6 +37,57 @@ const middleware = [
 ]
 
 middleware.forEach((it) => server.use(it))
+
+const saveFile = async (users) => {
+  return writeFile(`${__dirname}/test.json`, JSON.stringify(users), { encoding: 'utf8' })
+}
+
+const fileRead = async () => {
+  return readFile(`${__dirname}/test.json`, { encoding: 'utf8' })
+    .then((data) => JSON.parse(data))
+    .catch(async () => {
+      const { data: users } = await axios('https://jsonplaceholder.typicode.com/users')
+      await saveFile(users)
+    })
+}
+
+server.get('/api/v1/users', async (req, res) => {
+  const users = await fileRead()
+  res.json(users)
+})
+
+server.post('/api/v1/users', async (req, res) => {
+  const users = await fileRead()
+  const newUserBody = req.body
+  const userLength = users[users.length - 1].id
+  newUserBody.id = userLength + 1
+  const newUser = [...users, newUserBody]
+  saveFile(newUser)
+  res.json({ status: 'success', id: newUserBody.id })
+})
+
+server.patch('/api/v1/users/:userId', async (req, res) => {
+  const users = await fileRead()
+  const { userId } = req.params
+  const newUserBody = req.body
+  const newUsersArray = users.map((it) => (it.id === +userId ? Object.assign(it, newUserBody) : it))
+  saveFile(newUsersArray)
+  res.json({ status: 'success', id: userId })
+})
+
+server.delete('/api/v1/users/:userId', async (req, res) => {
+  const users = await fileRead()
+  const { userId } = req.params
+  users.splice(Number(userId) - 1, 1)
+  saveFile(users)
+  res.json({ status: 'success', id: Number(userId) })
+})
+
+server.delete('/api/v1/users', async (req, res) => {
+  const users = await fileRead()
+  await unlink(`${__dirname}/test.json`)
+  res.json(users)
+})
 
 server.use('/api/', (req, res) => {
   res.status(404)
