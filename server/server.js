@@ -84,9 +84,8 @@ server.delete('/api/v1/users/:userId', async (req, res) => {
 })
 
 server.delete('/api/v1/users', async (req, res) => {
-  const users = await fileRead()
   await unlink(`${__dirname}/test.json`)
-  res.json(users)
+  res.json()
 })
 
 server.use('/api/', (req, res) => {
