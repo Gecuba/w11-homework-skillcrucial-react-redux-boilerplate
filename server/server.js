@@ -46,8 +46,9 @@ const fileRead = async () => {
   return readFile(`${__dirname}/test.json`, { encoding: 'utf8' })
     .then((data) => JSON.parse(data))
     .catch(async () => {
-      const { data: users } = await axios('https://jsonplaceholder.typicode.com/users')
-      await saveFile(users)
+      const { data } = await axios('https://jsonplaceholder.typicode.com/users')
+      await saveFile(data)
+      return data
     })
 }
 
