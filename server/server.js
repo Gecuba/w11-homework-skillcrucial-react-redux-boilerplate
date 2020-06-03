@@ -24,7 +24,7 @@ const setHeaders = (req, res, next) => {
   res.set('Access-Control-Expose-Headers', 'X-SKILLCRUCIAL-USER')
   next()
 }
-server.use(setHeaders)
+server.use('/', setHeaders)
 
 let connections = []
 
